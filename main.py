@@ -16,6 +16,9 @@ async def main():
     media_fetcher = MediaFetcher()
     editor = VideoEditor()
 
+    # Ensure output folder exists for metadata
+    os.makedirs("output", exist_ok=True)
+
     # 2. Generate Script
     print("\n🚀 Step 1: AI Script Generation...")
     script_data = script_gen.generate_script(topic)
@@ -24,6 +27,19 @@ async def main():
         return
 
     print(f"📝 Script generated with {len(script_data)} segments.")
+
+    # --- NEW FEATURE: SEO METADATA GENERATION ---
+    # Combine all script segments into one text block for analysis
+    full_script_text = " ".join([seg['text'] for seg in script_data])
+    metadata = script_gen.generate_metadata(topic, full_script_text)
+    
+    if metadata:
+        with open("output/metadata.txt", "w") as f:
+            f.write(f"TITLE: {metadata.get('title', 'No Title')}\n\n")
+            f.write(f"DESCRIPTION:\n{metadata.get('description', 'No Description')}\n\n")
+            f.write(f"TAGS:\n{metadata.get('tags', 'No Tags')}")
+        print("✅ SEO Metadata saved to output/metadata.txt")
+    # ---------------------------------------------
 
     # 3. Process Segments
     generated_clips = []
@@ -36,8 +52,6 @@ async def main():
         if not audio_path: continue
         
         # B. Get Duration for Video Search
-        # (We need the audio file to exist to know exact duration)
-        # Note: We pass a rough estimate or just let the editor handle it
         video_path = media_fetcher.download_video(segment['visual'], 5, f"segment_{i}.mp4")
         if not video_path: continue
 

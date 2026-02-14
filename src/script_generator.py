@@ -14,6 +14,58 @@ class ScriptGenerator:
         
         self.client = Groq(api_key=self.api_key)
 
+    def generate_metadata(self, topic, script_content):
+        """
+        Generates YouTube Title, Description, and Tags based on the script.
+        """
+        print(f"📝 Generating SEO Metadata for: {topic}...")
+        
+        prompt = f"""
+        Based on this video script about '{topic}': "{script_content}"
+        
+        Generate YouTube Video Metadata in JSON format:
+        1. A Clickbait Title (max 50 chars)
+        2. A Video Description (100 words, including hooks)
+        3. 15 Comma-separated Tags
+        
+        Output JSON Structure:
+        {{
+            "title": "...",
+            "description": "...",
+            "tags": "..."
+        }}
+        """
+        
+        try:
+            completion = self.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are a helpful SEO assistant. Output valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=1024,
+                top_p=1,
+                stream=False,
+                stop=None,
+            )
+            
+            raw_content = completion.choices[0].message.content
+            
+            # Clean the response (remove Markdown if Llama adds it)
+            clean_text = raw_content.strip()
+            if "```json" in clean_text:
+                clean_text = clean_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in clean_text:
+                clean_text = clean_text.split("```")[1].split("```")[0].strip()
+            
+            # Parse JSON
+            return json.loads(clean_text)
+
+        except Exception as e:
+            print(f"❌ Error generating metadata: {e}")
+            return None
+
     def generate_script(self, topic):
         print(f"🧠 Brainstorming script for: {topic} (using Groq Llama-3)...")
         
